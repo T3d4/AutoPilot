@@ -81,7 +81,7 @@ def moveHandler(eventHandler, observer, path):
     except RuntimeError as e:
          print(f"---{e}---")
 
-def watchDog():
+def watch():
 
     for filename in filenames:
         filename = os.path.join(downloadDir, filename)
@@ -98,4 +98,4 @@ def watchDog():
     except KeyboardInterrupt:
         return
 
-watchDog()
+watch()
