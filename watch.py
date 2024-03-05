@@ -13,49 +13,60 @@ musicDir = os.path.join(homeDir, "Music/")
 documentDir = os.path.join(homeDir, "Documents/")
 videoDir = os.path.join(homeDir, "Videos/")
 programDir = os.path.join(homeDir, "Downloads/Programs/")
+compressedDir = os.path.join(homeDir, "Downloads/Compressed/")
+picDir = os.path.join(homeDir, "Pictures/")
 
 observer = Observer()
 monitoredDirectory = downloadDir
 
-def moveFile(source, file):
+def moveFile(file):
 
     try:
-        directory = os.path.join(source, file)
-        dstDirectory = programDir
-        if file.endswith(".zip"):
-            shutil.move(directory, dstDirectory)
-            print(f"---{file} moved to {dstDirectory}---")
-        else:
-            return
+        
+        if file.endswith(".zip") | file.endswith(".tar.gz"):
+            dstDirectory = documentDir
+            shutil.move(file, dstDirectory)
+            print(f"---{file} moved to '{dstDirectory}'---")
+        
+        elif file.endswith(".jpg") | file.endswith(".png"):
+            dstDirectory = picDir
+            shutil.move(file, dstDirectory)
+            print(f"---{file} moved to '{dstDirectory}'---")
+        
+        elif file.endswith(".mkv") | file.endswith(".mp4"):
+            dstDirectory = videoDir
+            shutil.move(file, dstDirectory)
+            print(f"---{file} moved to '{dstDirectory}'---")
         
     except FileNotFoundError as e:
          print(f"Destination directory does not exist: {e}")
-         os.makedirs(programDir)
-         print(f"{programDir} ---Created---")
-         moveFile(source, file)
+         os.makedirs(dstDirectory)
+         print(f"---{dstDirectory} created---")
+         moveFile(file, dstDirectory)
 
     except shutil.Error as e:
          print(f"---{e}---")
 
 class DirectoryListener(FileSystemEventHandler):
-     def on_modified(self, event: FileSystemEvent):
-          if event.is_directory:
-               return None
-          
-          observer.schedule(moveFile, downloadDir, event.src_path, recursive=True)
-
-          print(f"File Modified ---{event.src_path}---")
-
+    def on_created(self, event: FileSystemEvent):
+        if event.is_directory:
+            return None
+        
+        if event.src_path.endswith(".mkv.crdownload"):
+            return
+        
+        print(f"File Modified: {event.src_path}")
+        
+        moveFile(event.src_path)        
 
 eventHandler = DirectoryListener()
 
 def signalHandler(sig, frame):
     if sig == signal.SIGINT:
-        print("Recieved Ctrl+C, stopping observer...")
+        print("\nRecieved Ctrl+C, stopping observer...")
     if sig == signal.SIGTERM:
-        print("Recieved SIGTERM, stopping observer...")
-    else:
-        print(f"Recieved unknown signal {sig}, ignoring...") 
+        print("\nRecieved SIGTERM, stopping observer...")
+    
     observer.stop()
     observer.join()
     sys.exit(0)
@@ -71,10 +82,15 @@ def moveHandler(eventHandler, observer, path):
          print(f"---{e}---")
 
 def watchDog():
-    signal.signal(signal.SIGINT, signalHandler)
-    signal.signal(signal.SIGTERM, signalHandler)
+
+    for filename in filenames:
+        filename = os.path.join(downloadDir, filename)
+        moveFile(filename)
 
     moveHandler(eventHandler, observer, monitoredDirectory)
+
+    signal.signal(signal.SIGINT, signalHandler)
+    signal.signal(signal.SIGTERM, signalHandler)
 
     try: 
         while True:
